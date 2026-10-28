@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>therapist.160</title>
+<link rel="icon" href="assets/icons/favicon.png">
+<link rel="preload" as="image" href="assets/rig/body.webp">
+<link rel="preload" as="image" href="assets/rig/head.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 字型：中文只拿 3 種粗細；標題英文字型只下載英文字母和數字（text=），不下載整套日文 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap&text=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-%26">
+<style>
+/* 三個畫面共用同一個角色：
+   首頁   home  角色站在正中間、貼齊畫面下緣（圖只畫到大腿，所以永遠看不到腳）
+   列表   list  角色往下沉、抬頭，上方就是他「看到」的文字作品列表
+   作品頁 work  白紙從下面滑上來；角色縮成右下角只露出頭頂和眼睛
+   動畫時間都在 100–400ms。 */
+:root{
+  --bg:#5D72F1;          /* 與角色圖內鏤空處同色，不能改 */
+  --ink:#141D5A;
+  --ink-2:#1F2A73;
+  --skin:#F9C4D6;
+  --accent:#EE6F9C;
+  --paper:#FFFFFF;
+  --f-display:"Dela Gothic One","Noto Sans TC",system-ui,sans-serif;
+  --f-body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --spring:cubic-bezier(.3,1.35,.5,1);
+  --ease:cubic-bezier(.2,.9,.3,1);
+  /* 角色大小：高度跟著視窗，寬度＝圖的比例 801:1400 */
+  --H:min(90dvh,155vw);
+  --W:calc(var(--H) * .5721);
+  --listShow:.32;         /* 列表時，角色露出畫面的高度（佔 --H 的比例） */
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6;overflow:hidden;-webkit-tap-highlight-color:transparent}
+a{color:inherit}
+button{font:inherit;color:inherit}
+img{display:block;max-width:100%}
+:focus-visible{outline:3px solid var(--paper);outline-offset:3px;border-radius:8px}
+body.instant *{transition:none!important;animation:none!important}
+
+/* ---------- 頂部 ---------- */
+.mast{position:fixed;z-index:40;inset:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:max(14px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 14px max(18px,env(safe-area-inset-left));
+  pointer-events:none;transition:background .25s,box-shadow .25s}
+.mast>*{pointer-events:auto}
+.logo{display:inline-block;text-decoration:none;font-family:var(--f-display);font-size:20px;letter-spacing:.02em;white-space:nowrap;transition:transform .2s var(--spring)}
+.logo:hover{transform:translateX(-2px) rotate(-2deg)}
+body[data-view=work] .mast{background:var(--paper);box-shadow:0 2px 0 rgba(20,29,90,.08)}
+.logo.back{font-family:var(--f-body);font-weight:900;font-size:17px;letter-spacing:0}
+.gh{display:inline-flex;color:var(--ink);transition:transform .2s var(--spring)}
+.gh svg{width:26px;height:26px}
+.gh:hover{transform:translateX(2px) rotate(2deg)}
+.mastR{display:flex;align-items:center;gap:16px}
+
+/* ---------- 角色 ---------- */
+.rig{position:fixed;z-index:30;left:50%;bottom:0;width:var(--W);height:var(--H);transform-origin:50% 100%;
+  transition:transform .4s var(--spring);will-change:transform}
+body[data-view=home] .rig{transform:translate(calc(var(--W) * -.5),0) scale(1)}
+body[data-view=list] .rig{transform:translate(calc(var(--W) * -.5),calc(var(--H) * (1 - var(--listShow) / .62) * .62)) scale(.62)}
+body[data-view=work] .rig{transform:translate(calc(var(--W) * -.5),calc(var(--H) * 1.05)) scale(.8)}   /* 作品頁：沉到畫面外，最後在藍色收尾區再出來 */
+.hop{position:absolute;inset:0}
+.hop.go{animation:hop .32s var(--spring)}
+@keyframes hop{40%{transform:translateY(-3%)}}
+.breath{position:absolute;inset:0;transform-origin:50% 100%;animation:breath 4.2s ease-in-out infinite}
+@keyframes breath{50%{transform:scaleY(1.01)}}
+.rig img,.rig svg{position:absolute;inset:0;width:100%;height:100%;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.head{position:absolute;inset:0;transform-origin:45.1% 41.9%;will-change:transform}
+/* 短暫的動作圖（揮手、驚訝）：眼睛是畫死的，所以只出現一下就回到會看人的那層 */
+.art{position:absolute;inset:0;transition:opacity .12s}
+.rig[data-pose] .art{opacity:0}
+.rig .pose{position:absolute;inset:auto;bottom:0;left:45.27%;height:98%;width:auto;transform:translateX(calc(var(--hx) * -100%));opacity:0;transition:opacity .12s}
+.rig .pose.on{opacity:1}
+/* 只有頭和身體上半部可以點（圖的透明處不擋滑鼠） */
+.hit{position:absolute;left:8%;right:18%;top:0;height:62%;border-radius:40% 40% 20% 20%;cursor:pointer;background:none;border:0;padding:0}
+body[data-view=list] .hit{height:48%}
+body[data-view=work] .hit{display:none}
+
+/* ---------- 漂浮圖示：首頁繞著角色轉圈（假 3D：轉到前面變大、蓋在角色上；轉到後面變小變淡、躲到角色後面）；
+   列表跟著角色沉到下面，排在頭的兩邊。位置每一格由 placeIcons() 算；放不下（手機、窄視窗）的就藏起來 ----------
+   每個圖示自己 position:fixed（不包在 fixed 容器裡），z-index 才能跟角色比前後 */
+.ico{position:fixed;z-index:5;left:0;top:0;width:var(--s);height:var(--s);pointer-events:none;transition:opacity .2s;will-change:transform}
+.ico.front{z-index:32}
+.ico.off,body[data-view=work] .ico{opacity:0}
+.ico img{width:100%;height:100%;object-fit:contain;opacity:var(--a,1);transform:rotate(var(--r));animation:bob var(--d) ease-in-out infinite;animation-delay:var(--dl)}
+@keyframes bob{50%{transform:translateY(-9%) rotate(calc(var(--r) * -1))}}
+
+/* ---------- 首頁：對話框＋按鈕 ---------- */
+.bubble{position:fixed;z-index:31;left:calc(50% + var(--W) * .37);top:calc(100dvh - var(--H) * .88);max-width:290px;
+  background:var(--paper);color:var(--ink);border-radius:22px;padding:14px 16px 16px;box-shadow:6px 6px 0 var(--accent);
+  transform-origin:0 30%;transition:opacity .2s,transform .3s var(--spring)}
+.bubble::before{content:"";position:absolute;left:-13px;top:24px;border:9px solid transparent;border-right:14px solid var(--paper);border-left:0}
+.bubble p{margin:0 0 12px;font-weight:700;font-size:17px;line-height:1.4;min-height:1.4em}
+.bubble p.pop{animation:pop .3s var(--spring)}
+@keyframes pop{from{transform:scale(.8);opacity:0}}
+body:not([data-view=home]) .bubble{opacity:0;transform:scale(.6);pointer-events:none;visibility:hidden;transition:opacity .15s,transform .15s,visibility 0s .15s}
+.btn{display:inline-flex;align-items:center;gap:10px;border:0;cursor:pointer;text-decoration:none;font-weight:900;font-size:17px;
+  padding:11px 18px;border-radius:14px;background:var(--ink);color:var(--paper);box-shadow:5px 5px 0 var(--accent);transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--accent)}
+.btn:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--accent)}
+
+/* ---------- 列表：角色抬頭看到的東西 ---------- */
+.list{position:fixed;z-index:10;inset:0;overflow-y:auto;overscroll-behavior:contain;
+  padding:calc(88px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(var(--H) * var(--listShow) + 56px) max(16px,env(safe-area-inset-left));
+  -webkit-mask-image:linear-gradient(transparent 56px,#000 96px,#000 calc(100% - var(--H) * var(--listShow) - 70px),transparent calc(100% - var(--H) * var(--listShow) + 6px));
+          mask-image:linear-gradient(transparent 56px,#000 96px,#000 calc(100% - var(--H) * var(--listShow) - 70px),transparent calc(100% - var(--H) * var(--listShow) + 6px));
+  scrollbar-width:thin;scrollbar-color:var(--ink) transparent;transition:opacity .2s,visibility 0s}
+body:not([data-view=list]) .list{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s,visibility 0s .15s}
+.list-in{max-width:58rem;margin:0 auto}
+.list h2{margin:0 0 10px 18px;font-family:var(--f-display);font-weight:400;font-size:clamp(30px,4vw,44px);line-height:1.1}
+.rows{list-style:none;margin:0;padding:0}
+.row{display:grid;grid-template-columns:3rem minmax(0,1fr);align-items:baseline;gap:4px 16px;padding:13px 18px;border-radius:18px;
+  text-decoration:none;color:var(--paper);transition:transform .18s var(--spring),box-shadow .18s,background .12s,color .12s}
+.rows li+li{border-top:2px solid rgba(20,29,90,.18)}
+.row .n{font-family:var(--f-mono);font-weight:700;font-size:13px;color:var(--ink)}
+.row .t{font-weight:900;font-size:clamp(21px,2.6vw,34px);line-height:1.2;text-wrap:balance}
+/* 滑鼠才有 hover（手機點完回來不會卡在反白）；手機按下去當下反白 */
+.row:focus-visible,.row:active{background:var(--ink);color:var(--skin);transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--accent);outline:0}
+.row:focus-visible .n,.row:active .n{color:var(--skin)}
+@media (hover:hover){
+  .row:hover{background:var(--ink);color:var(--skin);transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--accent)}
+  .row:hover .n{color:var(--skin)}
+}
+body[data-view=list] .rows li{animation:rowIn .26s var(--spring) backwards;animation-delay:calc(min(var(--i),6) * 22ms)}
+body[data-view=list] .list h2{animation:rowIn .26s var(--spring) backwards}
+@keyframes rowIn{from{opacity:0;transform:translateY(-18px)}}
+
+/* ---------- 作品頁：白紙從下面滑上來 ---------- */
+.sheet{position:fixed;z-index:20;inset:0;overflow-y:auto;overscroll-behavior:contain;background:var(--paper);
+  transform:translateY(0);transition:transform .38s var(--ease),visibility 0s}
+body:not([data-view=work]) .sheet{transform:translateY(102%);visibility:hidden;transition:transform .3s var(--ease),visibility 0s .3s}
+.work{max-width:60rem;margin:0 auto;padding:calc(96px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 64px max(16px,env(safe-area-inset-left));transition:opacity .15s}
+.work.fade,.outro.fade{opacity:0}
+.w-no{font-family:var(--f-mono);font-weight:700;font-size:13px;letter-spacing:.08em;color:var(--accent);margin:0 0 10px}
+.work h1{font-weight:900;font-size:clamp(30px,4.6vw,56px);line-height:1.12;margin:0 0 40px;text-wrap:balance}
+/* 每一格都是一樣大的 16:9 範圍。圖和短片一律「高度＝框高」、寬度照原比例：
+   比 16:9 窄的（4:3、直圖）兩側留空不加底色；比 16:9 寬的左右裁掉。點了看整張 */
+.frame{margin:0 auto 28px;width:min(100%,calc(88dvh * 16 / 9));aspect-ratio:16/9;position:relative;border-radius:12px;overflow:hidden}
+.frame>*{position:absolute;inset:0;width:100%;height:100%}
+.zoom{border:0;padding:0;background:none;cursor:zoom-in}
+.zoom img,.zoom video{position:absolute;top:0;left:50%;height:100%;width:auto;max-width:none;border-radius:12px;
+  transform:translateX(-50%);transition:transform .3s var(--ease)}
+.zoom:hover img,.zoom:hover video{transform:translateX(-50%) scale(1.02)}
+.yt{border:0;padding:0;background:var(--ink);cursor:pointer;border-radius:12px;overflow:hidden}
+.yt img{width:100%;height:100%;object-fit:cover;opacity:.85}
+.yt span{position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;background:var(--accent);
+  display:grid;place-items:center;color:var(--paper);font-size:30px;box-shadow:5px 5px 0 var(--ink);transition:transform .2s var(--spring)}
+.yt:hover span{transform:scale(1.1)}
+.yt-play{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:12px;background:#000}   /* 按下播放後換成的播放器，填滿 16:9 框 */
+/* 直式影片（YouTube Shorts）：框一樣是 16:9，裡面放一個置中的 9:16 封面／播放器，兩側留空；手機上框改成直的，影片才不會太小 */
+.frame.tall>*{left:50%;right:auto;width:auto;aspect-ratio:9/16;transform:translateX(-50%)}
+@media (max-width:820px){.frame.tall{width:min(100%,calc(75dvh * 9 / 16));aspect-ratio:9/16}}
+.credits{margin:56px 0 0;background:var(--ink);color:var(--skin);border-radius:22px;padding:22px 24px;box-shadow:8px 8px 0 var(--accent)}
+.credits h2{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0 0 10px;color:var(--paper)}
+.credits ul{list-style:none;margin:0;padding:0;font-family:var(--f-mono);font-size:13.5px;line-height:1.9}
+.credits li{padding-left:1.5em;text-indent:-1.5em;word-break:keep-all;overflow-wrap:anywhere}   /* 中文名字不從中間斷；換行的部分往內縮 */
+/* 收尾區：回到藍色世界，角色比讚出來 */
+.outro{--BH:min(66dvh,580px);position:relative;overflow:hidden;background:var(--bg);min-height:calc(var(--BH) + 24px);
+  padding:64px max(16px,env(safe-area-inset-right)) 56px max(16px,env(safe-area-inset-left));transition:opacity .15s}
+.outro-in{max-width:60rem;margin:0 auto}
+.outro-text{max-width:min(32rem,calc(100% - var(--BH) * .5))}
+.outro .credits{margin:0}
+.buddy{position:absolute;bottom:0;right:max(0px,calc(50% - 30rem - 24px));height:var(--BH);width:calc(var(--BH) * .62);pointer-events:none}
+.buddy-fig{position:absolute;inset:0;transform:translateY(40%);opacity:0;transition:transform .38s var(--spring),opacity .15s}
+.outro.in .buddy-fig{transform:none;opacity:1}
+.buddy-fig img{position:absolute;bottom:0;left:45%;height:100%;width:auto;max-width:none;transform:translateX(calc(var(--hx) * -100%));transition:opacity .12s}
+.buddy-fig .b-wow,.outro.wow .buddy-fig .b-thumb{opacity:0}
+.outro.wow .buddy-fig .b-wow{opacity:1}
+.w-nav{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:32px}
+.w-nav a{display:block;text-decoration:none;padding:16px 18px;border-radius:18px;background:var(--ink);color:var(--paper);box-shadow:5px 5px 0 var(--accent);transition:transform .15s,box-shadow .15s}
+.w-nav a:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--accent)}
+.w-nav small{display:block;font-family:var(--f-mono);font-weight:700;font-size:12px;color:var(--skin)}
+.w-nav b{font-weight:900;line-height:1.3}
+.w-nav a.next{text-align:right}
+
+/* 點圖放大 */
+.lb{position:fixed;z-index:60;inset:0;background:rgba(20,29,90,.98);display:grid;grid-template-rows:1fr auto;padding:max(72px,calc(env(safe-area-inset-top) + 60px)) 16px max(16px,env(safe-area-inset-bottom));
+  cursor:zoom-out;opacity:0;visibility:hidden;transition:opacity .18s,visibility 0s .18s}
+.lb.on{opacity:1;visibility:visible;transition:opacity .18s}
+.lb img,.lb video{width:100%;height:100%;object-fit:contain;min-height:0}
+.lb video[hidden],.lb img[hidden]{display:none}
+.lb-bar{display:flex;justify-content:center;align-items:center;gap:18px;padding-top:12px;color:var(--skin);font-family:var(--f-mono);font-weight:700}
+.lb.single .lb-bar{visibility:hidden}
+.lb-bar button{border:0;background:var(--skin);color:var(--ink);width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:18px;font-weight:900}
+/* 右上角關閉鈕（上面留了一條空間，圖不會跑到它底下） */
+.lb-x{position:absolute;top:max(14px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));width:48px;height:48px;border:0;border-radius:50%;
+  background:var(--skin);color:var(--ink);cursor:pointer;display:grid;place-items:center;box-shadow:4px 4px 0 var(--accent);transition:transform .15s,box-shadow .15s}
+.lb-x svg{width:20px;height:20px}
+.lb-x:hover{transform:translate(-2px,-2px) rotate(90deg);box-shadow:6px 6px 0 var(--accent)}
+.lb-x:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--accent)}
+
+/* ---------- 手機 ---------- */
+@media (max-width:820px){
+  /* 手機：角色上方永遠留 200px 給左上文字和對話框，矮的螢幕（瀏覽器工具列佔掉高度）也不會被擠出去 */
+  :root{--H:min(100dvh - 200px,155vw)}
+  .bubble{left:50%;top:calc(100dvh - var(--H) - 14px);transform:translate(-50%,-100%);transform-origin:50% 100%;width:max-content;max-width:min(330px,calc(100vw - 32px));text-align:center}
+  .bubble::before{left:50%;top:auto;bottom:-13px;margin-left:-9px;border:9px solid transparent;border-top:14px solid var(--paper);border-bottom:0}
+  body:not([data-view=home]) .bubble{transform:translate(-50%,-100%) scale(.6)}
+  .row{grid-template-columns:minmax(0,1fr);gap:2px;padding:12px 12px}   /* 手機：年份放在標題上面，標題用滿整個寬度 */
+  .row .t{text-wrap:pretty}
+  .list h2{margin-left:12px}
+  .w-nav{grid-template-columns:1fr}
+  .work{padding-bottom:20px}
+  .outro{padding-top:48px}
+  .yt span{width:56px;height:56px;margin:-28px 0 0 -28px;font-size:20px;box-shadow:3px 3px 0 var(--ink)}
+  .credits{padding:18px 18px;box-shadow:6px 6px 0 var(--accent)}
+  .credits ul{font-size:12.5px}
+  .outro{--BH:min(50dvh,420px);padding-bottom:calc(var(--BH) + 24px)}
+  .outro-text{max-width:none}
+  .buddy{right:auto;left:50%;margin-left:calc(var(--BH) * -.31)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body data-view="home" class="instant">
+
+<header class="mast">
+  <span id="mastL"></span>
+  <span class="mastR">
+  <a class="gh ig" href="https://www.instagram.com/therapist.160/" target="_blank" rel="noopener noreferrer" aria-label="Instagram 零碎作品（開新分頁）">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.1" y="2.1" width="19.8" height="19.8" rx="5.6" fill="none" stroke="currentColor" stroke-width="2.3"/><circle cx="12" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="2.3"/><circle cx="17.7" cy="6.3" r="1.45" fill="currentColor"/></svg>
+  </a>
+  <a class="gh" href="https://github.com/Vic-Chen-160" target="_blank" rel="noopener noreferrer" aria-label="GitHub（開新分頁）">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+  </a>
+  </span>
+</header>
+
+<div id="icons" aria-hidden="true"></div>
+
+<!-- 列表：角色抬頭看到的東西 -->
+<nav class="list" id="list" aria-label="作品列表">
+  <div class="list-in">
+    <h2>WORKS</h2>
+    <ol class="rows" id="rows"></ol>
+  </div>
+</nav>
+
+<!-- 作品頁 -->
+<main class="sheet" id="sheet" tabindex="-1"><article class="work" id="work"></article><section class="outro" id="outro"></section></main>
+
+<!-- 角色：身體圖＋頭圖＋程式畫的眼睛 -->
+<div class="rig" id="rig">
+  <div class="hop" id="hop">
+    <div class="breath">
+      <div class="art">
+        <img src="assets/rig/body.webp" alt="">
+        <div class="head" id="head">
+          <img src="assets/rig/head.webp" alt="">
+          <svg id="eyes" viewBox="501 36 1151 2012" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </div>
+      </div>
+      <img class="pose" data-pose="wave" style="--hx:.4154" src="assets/poses/wave.webp" alt="">
+      <img class="pose" data-pose="wow" style="--hx:.4976" data-src="assets/poses/wow.webp" alt="">
+      <!-- 列表：抬頭看上面的作品。也拆成身體＋頭＋程式畫的眼睛，眼睛會跟游標。data-src＝首頁顯示完才載 -->
+      <div class="pose" data-pose="lookup" style="--hx:.476;aspect-ratio:758/1400">
+        <img data-src="assets/rig/lookup-body.webp" alt="">
+        <div class="head" id="headUp" style="transform-origin:47.5% 41.2%">
+          <img data-src="assets/rig/lookup-head.webp" alt="">
+          <svg id="eyesUp" viewBox="129 139 756 1397" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </div>
+      </div>
+    </div>
+    <button class="hit" id="hit" aria-label="戳一下角色"></button>
+  </div>
+</div>
+
+<div class="bubble" id="bubble">
+  <p id="line" role="status" aria-live="polite">Hi，我是Vic</p>
+  <a class="btn" href="#/works" id="cta">看更多專案</a>
+</div>
+
+<div class="lb" id="lb" role="dialog" aria-label="放大檢視">
+  <button class="lb-x" aria-label="關閉"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4l12 12M16 4L4 16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
+  <img alt="">
+  <video muted loop playsinline hidden></video>
+  <div class="lb-bar"><button data-go="-1" aria-label="上一張">←</button><span id="lbCount"></span><button data-go="1" aria-label="下一張">→</button></div>
+</div>
+
+<script src="assets/works.js"></script>
+<script>
+(() => {
+const WORKS = window.WORKS || [];
+const $ = s => document.querySelector(s);
+const body = document.body;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+
+/* ================= 眼睛（SVG，座標＝原始角色圖的像素） ================= */
+const NS = 'http://www.w3.org/2000/svg';
+const EYES = [   // 眼皮曲線（左端、控制點、右端）、虹膜、反光
+  { lid:[916,641, 990,625, 1066,641], iris:[978,650,46,47], hl:[34,16,9,6.5], k:1 },
+  { lid:[1186,635, 1241,636, 1296,648], iris:[1221,658,36,44], hl:[26,17,8,6], k:.8 },
+];
+const svg = $('#eyes');
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+const defs = el('defs', {}, svg);
+EYES.forEach((E, i) => {
+  E.openClip = el('path', {}, el('clipPath', { id:'open'+i }, defs));
+  E.irisClip = el('ellipse', {}, el('clipPath', { id:'iris'+i }, defs));
+  const g = el('g', { 'clip-path':`url(#open${i})` }, svg);
+  E.irisEl = el('ellipse', { fill:'#374AA0' }, g);
+  E.shade = el('path', { fill:'#071A4A' }, el('g', { 'clip-path':`url(#iris${i})` }, g));
+  E.hlEl = el('ellipse', { fill:'#FFFFFF' }, g);
+  E.lidEl = el('path', { fill:'none', stroke:'#0A1C4E', 'stroke-width':12, 'stroke-linecap':'round' }, svg);
+});
+// 列表的抬頭眼：上眼皮是一彎月牙（外弧、內弧），虹膜貼在眼皮下面；虹膜往下＝看你
+const EYES_UP = [
+  { p0:[345,545], p2:[440,527], out:[392,466], inn:[392,494], iris:[403,530,27], hl:[22,-3,6] },
+  { p0:[540,527], p2:[633,545], out:[586,464], inn:[586,492], iris:[576,530,27], hl:[-23,-3,6] },
+];
+const svgUp = $('#eyesUp'), defsUp = el('defs', {}, svgUp);
+EYES_UP.forEach((E, i) => {
+  E.openClip = el('path', {}, el('clipPath', { id:'openU'+i }, defsUp));
+  E.irisClip = el('circle', {}, el('clipPath', { id:'irisU'+i }, defsUp));
+  const g = el('g', { 'clip-path':`url(#openU${i})` }, svgUp);
+  E.irisEl = el('circle', { fill:'#3A4BA6' }, g);
+  E.shade = el('path', { fill:'#0B1B4D' }, el('g', { 'clip-path':`url(#irisU${i})` }, g));
+  E.hlEl = el('circle', { fill:'#FFFFFF' }, g);
+  E.lidEl = el('path', { fill:'#0B1B4D' }, svgUp);
+});
+function drawEyesUp(ux, uy, blink){
+  const B = blink * 30;                                       // 眨眼：眼皮往下蓋
+  EYES_UP.forEach(E => {
+    const [x0,y0] = E.p0, [x2,y2] = E.p2, [ox,oy] = E.out, [nx,ny] = E.inn;
+    const inner = (d) => `M${x0-30},${y0+d} L${x0},${y0+d} Q${nx},${ny+d} ${x2},${y2+d} L${x2+30},${y2+d}`;
+    E.lidEl.setAttribute('d', `M${x0},${y0+B} Q${ox},${oy+B} ${x2},${y2+B} Q${nx},${ny+B} ${x0},${y0+B}Z`);
+    E.openClip.setAttribute('d', `${inner(B)} L${x2+30},640 L${x0-30},640Z`);
+    E.shade.setAttribute('d', `${inner(B)} L${x2+30},${y2+B+10} L${x2},${y2+B+10} Q${nx},${ny+B+10} ${x0},${y0+B+10} L${x0-30},${y0+B+10}Z`);
+    const [ix,iy,r] = E.iris, X = ix + ux * 10, Y = iy + (uy + 1) / 2 * 18;   // uy=-1 往上看（預設），0 看你，1 往下
+    for (const t of [E.irisEl, E.irisClip]) { t.setAttribute('cx', X); t.setAttribute('cy', Y); t.setAttribute('r', r); }
+    const [hx,hy,hr] = E.hl;
+    E.hlEl.setAttribute('cx', X + hx); E.hlEl.setAttribute('cy', Y + hy); E.hlEl.setAttribute('r', hr);
+  });
+}
+const curve = (E, L) => { const [x0,y0,cx,cy,x1,y1] = E.lid; return [x0, y0+L, cx, cy+L, x1, y1+L]; };
+function drawEyes(ex, ey, L){
+  EYES.forEach(E => {
+    const [x0,y0,cx,cy,x1,y1] = curve(E, L);
+    const q = `Q${cx},${cy} ${x1},${y1}`;
+    E.lidEl.setAttribute('d', `M${x0},${y0} ${q}`);
+    E.openClip.setAttribute('d', `M${x0-40},${y0} L${x0},${y0} ${q} L${x1+40},${y1} L${x1+40},780 L${x0-40},780Z`);
+    E.shade.setAttribute('d', `M${x0-40},${y0} L${x0},${y0} ${q} L${x1+40},${y1} L${x1+40},${y1+15} L${x1},${y1+15} Q${cx},${cy+15} ${x0},${y0+15} L${x0-40},${y0+15}Z`);
+    const [ix,iy,rx,ry] = E.iris, X = ix + ex * E.k, Y = iy + ey;
+    for (const t of [E.irisEl, E.irisClip]) { t.setAttribute('cx', X); t.setAttribute('cy', Y); t.setAttribute('rx', rx); t.setAttribute('ry', ry); }
+    const [hx,hy,hrx,hry] = E.hl;
+    E.hlEl.setAttribute('cx', X + hx); E.hlEl.setAttribute('cy', Y + hy); E.hlEl.setAttribute('rx', hrx); E.hlEl.setAttribute('ry', hry);
+  });
+}
+
+/* ================= 角色動作：看游標、眨眼、抬頭 ================= */
+const rig = $('#rig'), head = $('#head'), headUp = $('#headUp');
+const S = { ex:0, ey:0, ux:0, uy:0, look:0, wide:0, hr:0, hx:0 };      // 目前值（平滑追上目標）
+const T = { ex:0, ey:0, ux:0, uy:0, look:0, wide:0, hr:0, hx:0 };      // 目標值
+let rigH = 0, pointer = null, lastMove = -1e9, blinkAt = performance.now() + 1800, blinkT = -1, glanceUntil = 0, glance = null;
+
+let usingKeys = false;
+addEventListener('keydown', () => usingKeys = true, true);
+addEventListener('pointerdown', () => usingKeys = false, true);
+addEventListener('pointermove', e => { pointer = { x:e.clientX, y:e.clientY }; lastMove = performance.now(); }, { passive:true });
+addEventListener('pointerdown', e => { pointer = { x:e.clientX, y:e.clientY }; lastMove = performance.now(); }, { passive:true });
+document.addEventListener('pointerleave', () => { lastMove = -1e9; });
+
+function aim(now){
+  const view = body.dataset.view;
+  const r = rig.getBoundingClientRect(); rigH = rig.offsetHeight;   // 先讀版面、後面才寫樣式
+  const eyeX = r.left + r.width * .52, eyeY = r.top + r.height * .307;
+  let ux = 0, uy = 0;
+  const active = pointer && now - lastMove < 3500;
+  if (active) {
+    const dx = pointer.x - eyeX, dy = pointer.y - eyeY, d = Math.hypot(dx, dy) || 1;
+    const f = Math.min(1, d / Math.max(160, r.height * .45));   // 游標在臉上 → 盯著你看（眼睛回正中間）
+    ux = dx / d * f; uy = dy / d * f;
+  } else if (view === 'home') {
+    // 沒在動：大多時間直視瀏覽者，偶爾瞄一下按鈕
+    if (now > glanceUntil + 2600 + Math.random() * 3000) { glance = Math.random() < .5 ? [.9,.15] : [-.6,.25]; glanceUntil = now + 700; }
+    if (glance && now < glanceUntil) [ux, uy] = glance;
+  } else if (view === 'list') { uy = -1; }                   // 抬頭看列表
+  else { ux = -.7; uy = -.7; }                               // 作品頁：往左上看內容
+  T.ux = ux; T.uy = uy;
+  T.ex = ux * 16; T.ey = uy < 0 ? uy * 17 : uy * 8;
+  T.hr = ux * 2.4; T.hx = ux * .008 * r.width;
+  T.look = view === 'list' ? 1 : view === 'work' ? .5 : 0;
+}
+
+let prev = performance.now();
+function frame(now){
+  const dt = Math.min(64, now - prev); prev = now;
+  aim(now);
+  const k = t => 1 - Math.exp(-dt / t);
+  S.ex += (T.ex - S.ex) * k(55); S.ey += (T.ey - S.ey) * k(55);
+  S.ux += (T.ux - S.ux) * k(55); S.uy += (T.uy - S.uy) * k(55);
+  S.hr += (T.hr - S.hr) * k(110); S.hx += (T.hx - S.hx) * k(110);
+  S.look += (T.look - S.look) * k(90); S.wide += (T.wide - S.wide) * k(60);
+  // 眨眼：60ms 闔上、100ms 張開；偶爾連眨兩下
+  let blink = 0;
+  if (blinkT < 0 && now > blinkAt) blinkT = now;
+  if (blinkT >= 0) {
+    const t = (now - blinkT) / 160;
+    blink = t < .375 ? t / .375 : Math.max(0, 1 - (t - .375) / .625);
+    if (t >= 1) { blinkT = -1; blinkAt = now + (Math.random() < .15 ? 180 : 2200 + Math.random() * 3800); }
+  }
+  const L = -20 * S.look - 12 * S.wide + 64 * blink;          // 眼皮位置：負＝睜大，正＝闔上
+  drawEyes(S.ex, S.ey - 4 * S.look, L);
+  const h = rigH;
+  head.style.transform = `translate(${S.hx.toFixed(2)}px,${(-.022 * h * S.look).toFixed(2)}px) rotate(${(S.hr - 3 * S.look).toFixed(2)}deg)`;
+  if (rig.dataset.pose === 'lookup') {                        // 列表：抬頭的那張也跟著看、跟著轉頭、會眨眼
+    drawEyesUp(S.ux, S.uy, blink);
+    headUp.style.transform = `translate(${S.hx.toFixed(2)}px,0) rotate(${S.hr.toFixed(2)}deg)`;
+  }
+  placeIcons(now, dt);
+  requestAnimationFrame(frame);
+}
+drawEyes(0, 0, 0); drawEyesUp(0, -1, 0);
+requestAnimationFrame(frame);
+
+/* ================= 對話框 ================= */
+const line = $('#line');
+const LINES = {
+  hello: 'Hi，我是Vic',
+  idle: ['ㄅ級分的靈感','好累Zzz','點擊按鈕看專案吧'],
+  poke: ['是點按鈕，不是點我～','眼鏡要歪了～'],
+  cta: '沒錯，點下去',
+};
+let lastLine = LINES.hello, idleTimer;
+const pick = a => { const c = a.filter(x => x !== lastLine); return c[Math.floor(Math.random() * c.length)]; };
+function say(t){ if (t === lastLine) return; lastLine = t; line.textContent = t; line.classList.remove('pop'); void line.offsetWidth; line.classList.add('pop'); }
+function idleLoop(){ clearInterval(idleTimer); idleTimer = setInterval(() => { if (body.dataset.view === 'home') say(pick(LINES.idle)); }, 9000); }
+idleLoop();
+
+const LIST_POSE = 'lookup';
+const poses = [...rig.querySelectorAll('.pose')];
+const basePose_ = v => v === 'list' ? LIST_POSE : null;   // 列表一直是抬頭；其他畫面是會看人的那層
+const basePose = () => basePose_(body.dataset.view);
+let poseTimer, wanted = null;
+const imgsOf = p => p.tagName === 'IMG' ? [p] : [...p.querySelectorAll('img')];
+const ensureSrc = i => { if (i.dataset.src && !i.getAttribute('src')) i.src = i.dataset.src; };
+function setPose(name, ms){       // 只有圖載好了才換，不然會一瞬間整個人不見；載好後再補上
+  clearTimeout(poseTimer); wanted = name;
+  const im = name && poses.find(p => p.dataset.pose === name);
+  const imgs = im ? imgsOf(im) : [];
+  imgs.forEach(ensureSrc);
+  const ok = im && imgs.every(i => i.complete && i.naturalWidth);
+  if (im && !ok) imgs.forEach(i => i.addEventListener('load', () => { if (wanted === name) setPose(name, ms); }, { once:true }));
+  if (ok) rig.dataset.pose = name; else delete rig.dataset.pose;
+  poses.forEach(p => p.classList.toggle('on', ok && p === im));
+  if (ok && ms) poseTimer = setTimeout(() => setPose(basePose()), ms);
+}
+let wideTimer;
+function surprise(ms){ T.wide = 1; clearTimeout(wideTimer); wideTimer = setTimeout(() => T.wide = 0, ms); }
+const hop = $('#hop');
+$('#hit').addEventListener('click', () => {
+  hop.classList.remove('go'); void hop.offsetWidth; hop.classList.add('go');
+  surprise(700);
+  if (body.dataset.view === 'home') { say(pick(LINES.poke)); idleLoop(); setPose('wow', 1100); }
+  else location.hash = body.dataset.view === 'work' ? '#/works' : '#/';
+});
+const cta = $('#cta');
+cta.addEventListener('pointerenter', () => { surprise(99999); say(LINES.cta); });
+cta.addEventListener('pointerleave', () => { T.wide = 0; });
+cta.addEventListener('focus', () => surprise(800));
+
+/* ================= 列表 ================= */
+const list = $('#list'), rows = $('#rows');
+rows.innerHTML = WORKS.map((w, i) => `
+  <li style="--i:${i}"><a class="row" href="#/works/${esc(w.slug)}" data-i="${i}">
+    <span class="n">${esc(w.year || '')}</span>
+    <span class="t">${esc(w.title)}</span>
+  </a></li>`).join('');
+
+/* ================= 作品頁 ================= */
+const sheet = $('#sheet'), work = $('#work');
+let current = -1, gallery = [];
+function block(b){
+  if (b.type === 'images') return b.items.map(src => { const n = gallery.push({ src }) - 1; return `<figure class="frame"><button class="zoom" data-z="${n}" aria-label="放大第 ${n + 1} 張"><img src="${esc(src)}" alt="" loading="lazy"></button></figure>`; }).join('');
+  if (b.type === 'youtube') {
+    // 沒給封面就用 YouTube 自己的縮圖：先放 640 寬的（一定有），有 1280 寬的高畫質版再換上去
+    const img = b.poster ? `<img src="${esc(b.poster)}" alt="" loading="lazy">`
+      : `<img src="https://i.ytimg.com/vi/${esc(b.id)}/sddefault.jpg" data-hd="https://i.ytimg.com/vi/${esc(b.id)}/maxresdefault.jpg" alt="" loading="lazy">`;
+    return `<figure class="frame${b.orientation === 'portrait' ? ' tall' : ''}"><button class="yt" data-yt="${esc(b.id)}" aria-label="播放影片">${img}<span>▶</span></button></figure>`;
+  }
+  if (b.type === 'video') { const n = gallery.push({ src:b.src, video:true }) - 1; return `<figure class="frame"><button class="zoom" data-z="${n}" aria-label="放大看整段短片"><video src="${esc(b.src)}" muted loop playsinline preload="metadata"></video></button></figure>`; }
+  return '';
+}
+function renderWork(i){
+  const w = WORKS[i]; gallery = [];
+  const credits = [w.client && `Client : ${w.client}`, w.agency && `Agency : ${w.agency}`].filter(Boolean);   // Credits 只列 Client、Agency（Vic 2026-10-17）
+  const p = WORKS[(i - 1 + WORKS.length) % WORKS.length], n = WORKS[(i + 1) % WORKS.length];
+  work.innerHTML = `
+    <p class="w-no">${esc(w.year || '')}</p>
+    <h1>${esc(w.title)}</h1>
+    ${(w.blocks || []).map(block).join('')}
+    `;
+  outro.classList.remove('in', 'wow');
+  outro.innerHTML = `
+    <div class="outro-in"><div class="outro-text">
+      ${credits.length ? `<section class="credits"><h2>Credits</h2><ul>${credits.map(c => `<li>${esc(c)}</li>`).join('')}</ul></section>` : ''}
+      ${WORKS.length > 1 ? `<nav class="w-nav">
+        <a href="#/works/${esc(p.slug)}"><small>← 上一件</small><b>${esc(p.title)}</b></a>
+        <a class="next" href="#/works/${esc(n.slug)}"><small>下一件 →</small><b>${esc(n.title)}</b></a>
+      </nav>` : ''}
+    </div></div>
+    <div class="buddy" aria-hidden="true">
+      <div class="buddy-fig">
+        <img class="b-thumb" style="--hx:.4489" src="assets/poses/thumb.webp" alt="" loading="lazy">
+        <img class="b-wow" style="--hx:.4976" src="assets/poses/wow.webp" alt="" loading="lazy">
+      </div>
+    </div>`;
+  work.querySelectorAll('video').forEach(v => vio.observe(v));
+  work.querySelectorAll('img[data-hd]').forEach(img => {   // 高畫質縮圖不存在時 YouTube 會回一張 120 寬的灰圖，不換
+    const t = new Image(); t.onload = () => { if (t.naturalWidth >= 1280) img.src = t.src; }; t.src = img.dataset.hd;
+  });
+  document.title = `${w.title} — therapist.160`;
+}
+const outro = $('#outro');
+// 捲到最後的藍色區：角色比讚冒出來；滑到「下一件」他會驚訝
+new IntersectionObserver(([e]) => outro.classList.toggle('in', e.isIntersecting), { root:sheet, threshold:.35 }).observe(outro);
+outro.addEventListener('pointerover', e => outro.classList.toggle('wow', !!e.target.closest('.next')));
+outro.addEventListener('pointerleave', () => outro.classList.remove('wow'));
+const vio = new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? e.target.play().catch(() => {}) : e.target.pause()), { root:sheet, threshold:.4 });
+work.addEventListener('click', e => {
+  const yt = e.target.closest('.yt');
+  if (yt) {   // 整顆封面按鈕換成播放器（播放器不能放在按鈕裡面）
+    const f = document.createElement('iframe');
+    f.className = 'yt-play'; f.title = '影片'; f.allowFullscreen = true;
+    f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(yt.dataset.yt)}?autoplay=1&rel=0&playsinline=1`;
+    yt.replaceWith(f); f.focus(); return;
+  }
+  const z = e.target.closest('.zoom'); if (z) openLb(+z.dataset.z);
+});
+
+/* 點圖放大 */
+const lb = $('#lb'), lbImg = lb.querySelector('img'), lbVid = lb.querySelector('video'), lbCount = $('#lbCount');
+let lbAt = 0, lbBack = null;
+const lbClose = lb.querySelector('.lb-x');
+function openLb(i){
+  lbAt = (i + gallery.length) % gallery.length;
+  const g = gallery[lbAt];
+  lbImg.hidden = !!g.video; lbVid.hidden = !g.video;
+  if (g.video) { lbVid.src = g.src; lbVid.play().catch(() => {}); } else { lbVid.pause(); lbImg.src = g.src; }
+  lbCount.textContent = `${pad(lbAt + 1)} / ${pad(gallery.length)}`;
+  lb.classList.toggle('single', gallery.length < 2);   // 只有一張：不顯示 ← 01 / 01 →
+  if (!lb.classList.contains('on')) { lbBack = document.activeElement; lb.classList.add('on'); lbClose.focus({ preventScroll:true }); }   // 打開時焦點放在關閉鈕
+}
+const closeLb = () => {
+  if (!lb.classList.contains('on')) return;
+  lb.classList.remove('on'); lbVid.pause();
+  if (lbBack && lbBack.focus) lbBack.focus({ preventScroll:true });   // 關掉後回到剛剛點的那張
+};
+// 手機：放大檢視裡左右滑換張
+let lbX = null;
+lb.addEventListener('touchstart', e => { lbX = e.touches[0].clientX; }, { passive:true });
+lb.addEventListener('touchend', e => {
+  if (lbX === null) return;
+  const d = e.changedTouches[0].clientX - lbX; lbX = null;
+  if (Math.abs(d) > 50) { lb.dataset.swiped = '1'; openLb(lbAt + (d < 0 ? 1 : -1)); }
+}, { passive:true });
+lb.addEventListener('click', e => { if (lb.dataset.swiped) { delete lb.dataset.swiped; return; } const b = e.target.closest('[data-go]'); if (b) { e.stopPropagation(); openLb(lbAt + +b.dataset.go); } else closeLb(); });
+
+/* ================= 漂浮圖示 ================= */
+// 列表：[左0／右1, u, v]，u＝離角色多遠（0 貼著角色、1 貼著畫面邊），v＝高度（0 上、1 下）
+const SLOTS = [[0,.6,.25],[0,.12,.7],[1,.55,.22],[1,.15,.68]];
+const ORBIT_MS = 15000;                                      // 首頁繞一圈的時間
+const icons = $('#icons');
+const ICO = ['chat','star','bulb','robot'].map((n, i) => {
+  const d = document.createElement('div'); d.className = 'ico';
+  d.style.cssText = `--r:${[-6,5,-4,4][i]}deg;--d:${4.2 + i * .45}s;--dl:${-i * .9}s`;
+  d.innerHTML = `<img src="assets/icons/${n}.webp" alt="" decoding="async">`;
+  icons.appendChild(d);
+  return { el:d, x:0, y:0, k:1, lx:0, ly:0 };
+});
+const bubble = $('#bubble');
+let orb = null, icoS = 0, snap = true;
+function layoutIcons(){                                      // 視窗大小或畫面變了才算一次
+  const v = body.dataset.view; if (v === 'work') return;
+  const H = rig.offsetHeight, W = rig.offsetWidth, cx = innerWidth / 2;
+  const clamp = (lo, x, hi) => Math.min(hi, Math.max(lo, x));
+  const pad = innerWidth < 600 ? 8 : 24;                      // 離畫面邊緣多遠（手機貼近一點）
+  if (v === 'home') {
+    // 大小同時看高度和寬度：手機上角色幾乎佔滿寬度，圖示要小一點才繞得過去
+    icoS = clamp(40, Math.min(H * .1, innerWidth * .12), 110);
+    const rx = Math.min(W * 1.05, cx - icoS * .7 - pad);       // 繞到左右兩邊時不能超出畫面
+    const ry = H * .11;
+    let cy = innerHeight - H * .42;
+    // 矮的視窗（手機橫放）：對話框比較低，繞到後面的圖示會撞到它 → 整圈往下移，但不超出畫面底
+    if (!matchMedia('(max-width:820px)').matches) {
+      const bubbleBottom = bubble.offsetTop + bubble.offsetHeight;   // 電腦版對話框在角色右上，offsetTop 就是它的上緣
+      cy = Math.min(Math.max(cy, bubbleBottom + 8 + ry + icoS * .4), innerHeight - ry - icoS * .7);
+    }
+    orb = rx < icoS ? null : { cx, cy, rx, ry };
+    ICO.forEach(I => I.el.classList.toggle('off', !orb));
+  } else {
+    const band = H * parseFloat(getComputedStyle(body).getPropertyValue('--listShow'));
+    icoS = clamp(34, Math.min(band * .4, innerWidth * .11), 100);
+    const half = W * .25, gap = icoS * .3;                  // half＝列表時頭（含頭髮）寬度的一半
+    const top = innerHeight - band + 8, bot = innerHeight - icoS - 12;
+    const room = cx - half - gap - pad;                       // 頭到畫面邊緣的距離
+    const zone = Math.max(0, room - icoS);                    // 單邊可以放圖示的寬度（0＝排成一直排）
+    SLOTS.forEach(([side, u, y], i) => {
+      const I = ICO[i];
+      I.lx = side ? cx + half + gap + u * zone : cx - half - gap - icoS - u * zone;
+      I.ly = top + y * (bot - top);
+      I.el.classList.toggle('off', room < icoS);
+    });
+  }
+  ICO.forEach(I => I.el.style.setProperty('--s', icoS + 'px'));
+}
+addEventListener('resize', layoutIcons);
+function placeIcons(now, dt){                                // 每一格：算目標位置，換畫面時平滑地飛過去
+  const v = body.dataset.view; if (v === 'work') return;
+  const k = snap ? 1 : 1 - Math.exp(-dt / 110);
+  ICO.forEach((I, i) => {
+    let tx, ty, tk = 1, a = 1, front = false;
+    if (v === 'home' && orb) {
+      const t = (reduce ? 0 : now / ORBIT_MS * Math.PI * 2) + i * Math.PI * 2 / ICO.length + .5;
+      const z = Math.sin(t);                                  // 1＝最前面，-1＝最後面
+      tx = orb.cx + Math.cos(t) * orb.rx - icoS / 2; ty = orb.cy + z * orb.ry - icoS / 2;
+      tk = 1 + .3 * z; a = .72 + .28 * z; front = z > 0;
+    } else { tx = I.lx; ty = I.ly; }
+    I.x += (tx - I.x) * k; I.y += (ty - I.y) * k; I.k += (tk - I.k) * k;
+    I.el.classList.toggle('front', front);
+    I.el.style.setProperty('--a', a.toFixed(2));
+    I.el.style.transform = `translate(${I.x.toFixed(1)}px,${I.y.toFixed(1)}px) scale(${I.k.toFixed(3)})`;
+  });
+  snap = false;
+}
+
+/* ================= 換畫面（網址 #/、#/works、#/works/{slug}） ================= */
+// 左上角只有文字；右上角 IG＋GitHub；左下角什麼都不放
+const mastL = $('#mastL');
+const LOGO = `<a class="logo" href="#/">therapist.160</a>`;
+function route(){
+  const m = location.hash.match(/^#\/works\/(.+)$/);
+  const i = m ? WORKS.findIndex(w => w.slug === decodeURIComponent(m[1])) : -1;
+  const view = i >= 0 ? 'work' : location.hash.startsWith('#/works') ? 'list' : 'home';
+  const was = body.dataset.view;
+  closeLb();
+  if (view === 'work') {
+    if (was === 'work' && i !== current) {          // 上一件／下一件：內容淡出淡入
+      work.classList.add('fade'); outro.classList.add('fade');
+      setTimeout(() => { renderWork(i); sheet.scrollTop = 0; work.classList.remove('fade'); outro.classList.remove('fade'); }, 150);
+    } else if (i !== current || was !== 'work') { renderWork(i); sheet.scrollTop = 0; }
+    current = i;
+    mastL.innerHTML = `<a class="logo back" href="#/works">← 作品列表</a>`;
+    sheet.focus({ preventScroll:true });
+  } else {
+    work.querySelectorAll('video').forEach(v => v.pause());
+    if (work.querySelector('.yt-play')) renderWork(current);   // 離開作品頁：正在播的 YouTube 收掉（換回封面），不然會在背景繼續出聲
+    document.title = 'therapist.160';
+    mastL.innerHTML = LOGO;
+    if (view === 'list' && was === 'home') list.scrollTop = 0;
+    if (view === 'list' && was === 'work' && current >= 0) setTimeout(() => {   // 回到剛剛看的那件；用鍵盤的人才把焦點放上去（手機點的不反白）
+      const r = rows.querySelectorAll('.row')[current]; if (!r) return;
+      // 捲到看得見的那一段正中間（下面被角色和淡出遮住的地方不算）
+      const bottom = innerHeight - rig.offsetHeight * parseFloat(getComputedStyle(body).getPropertyValue('--listShow')) - 70;
+      const box = r.getBoundingClientRect();
+      list.scrollTop += box.top - ((96 + bottom) / 2 - box.height / 2);
+      if (usingKeys) r.focus({ preventScroll:true });
+    }, 60);
+    if (view === 'home') { say(LINES.hello); idleLoop(); T.wide = 0; if (was && was !== 'home') setPose('wave', 1300); }   // 手機點按鈕不會觸發「滑出」，回首頁時把睜大的眼睛收回來
+    else setPose(basePose_(view));
+  }
+  body.dataset.view = view;
+  layoutIcons();
+}
+addEventListener('hashchange', route);
+route();
+requestAnimationFrame(() => requestAnimationFrame(() => body.classList.remove('instant')));
+// 一打開：揮手打招呼
+const waveImg = rig.querySelector('.pose[data-pose=wave]');
+waveImg.decode().then(() => { if (body.dataset.view === 'home') setPose('wave', 1800); }).catch(() => {});
+// 首頁先顯示，其他動作圖等瀏覽器有空再載（點太快的話 setPose 會當場補載）
+addEventListener('load', () => setTimeout(() => poses.forEach(p => imgsOf(p).forEach(ensureSrc)), 800));
+
+/* 鍵盤、滾輪、滑動 */
+addEventListener('keydown', e => {
+  const v = body.dataset.view;
+  if (lb.classList.contains('on')) {
+    if (e.key === 'Escape') closeLb(); else if (e.key === 'ArrowLeft') openLb(lbAt - 1); else if (e.key === 'ArrowRight') openLb(lbAt + 1);
+    return;
+  }
+  if (v === 'home' && ['ArrowUp','ArrowDown','Enter'].includes(e.key) && !e.target.closest('a,button')) { e.preventDefault(); location.hash = '#/works'; }
+  else if (v === 'list' && e.key === 'Escape') location.hash = '#/';
+  else if (v === 'work') {
+    if (e.key === 'Escape') location.hash = '#/works';
+    else if (WORKS.length < 2) return;   // 只有一件作品：沒有上一件／下一件
+    else if (e.key === 'ArrowLeft') location.hash = '#/works/' + WORKS[(current - 1 + WORKS.length) % WORKS.length].slug;
+    else if (e.key === 'ArrowRight') location.hash = '#/works/' + WORKS[(current + 1) % WORKS.length].slug;
+  }
+});
+let wheelSum = 0, wheelTimer;
+addEventListener('wheel', e => {
+  const v = body.dataset.view;
+  if (v === 'home' || (v === 'list' && list.scrollTop <= 0 && e.deltaY < 0)) {
+    wheelSum += e.deltaY; clearTimeout(wheelTimer); wheelTimer = setTimeout(() => wheelSum = 0, 200);
+    if (v === 'home' && wheelSum > 40) { wheelSum = 0; location.hash = '#/works'; }
+    if (v === 'list' && wheelSum < -160) { wheelSum = 0; location.hash = '#/'; }
+  }
+}, { passive:true });
+let touchY = null, touchTop = 0;
+addEventListener('touchstart', e => { touchY = e.touches[0].clientY; touchTop = list.scrollTop; }, { passive:true });
+addEventListener('touchend', e => {
+  if (touchY === null) return;
+  const d = touchY - e.changedTouches[0].clientY, v = body.dataset.view; touchY = null;
+  if (v === 'home' && d > 50) location.hash = '#/works';
+  else if (v === 'list' && touchTop <= 0 && d < -90) location.hash = '#/';
+}, { passive:true });
+})();
+</script>
+</body>
+</html>
