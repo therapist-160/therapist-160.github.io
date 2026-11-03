@@ -1,0 +1,73 @@
+/* ---------- 首頁 ---------- */
+.sky {
+  position: fixed; inset: 0 0 auto 0; height: 88vh; z-index: 0; pointer-events: none;
+  -webkit-mask-image: linear-gradient(#000 0, #000 30%, rgba(0, 0, 0, .5) 54%, transparent 70%);
+  mask-image: linear-gradient(#000 0, #000 30%, rgba(0, 0, 0, .5) 54%, transparent 70%);
+  opacity: var(--sky-op, .32); transition: opacity .76s var(--ease-out);
+}
+body.has-reader .sky { opacity: 0; }
+.sky canvas { width: 100%; height: 100%; display: block; }
+/* 夜空（sunlight.js 畫星星，晚上淡入蓋在白天的雲上面） */
+.sky { isolation: isolate; }
+.sky .sky__night { position: absolute; inset: 0; opacity: 0; object-fit: fill; }
+/* 直放的螢幕：雲不要被拉成直條，裁切而不是拉伸 */
+@media (orientation: portrait) { .sky canvas { object-fit: cover; object-position: 50% 0; } }
+
+.hero { position: relative; z-index: 1; padding: max(4.5rem, 13vh) var(--gutter) 0; text-align: center; pointer-events: none; }
+.hero__go a { pointer-events: auto; }
+/* 去列表時標題、滑桿往上淡出（--walk 由 app.js 從 0 走到 1，走到 0.75 就完全看不到，跟原站一樣） */
+.hero, .track__inner { opacity: clamp(0, 1 - var(--walk, 0) / .75, 1); translate: 0 calc(var(--walk, 0) * -14px); }
+body:not(.at-home) .hero__go a, body:not(.at-home) .track { pointer-events: none; }
+
+/* 跟原站一樣：整頁都可以拖曳轉動草地 */
+body.at-home { cursor: grab; touch-action: pan-y; }
+body.at-home.is-dragging { cursor: grabbing; }
+body.at-home.is-dragging * { user-select: none; }
+.hero__word {
+  /* 桌機 5.3rem；窄螢幕跟著寬度縮（原站 7.4vw），矮螢幕（手機橫放）跟著高度縮 */
+  font-family: var(--serif); font-size: clamp(1.7rem, min(7.4vw, 12vh), 5.3rem); line-height: 1; letter-spacing: -0.028em;
+  font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 12, 'wght' 340;
+  display: inline-block; white-space: nowrap; opacity: 0; transition: opacity .5s ease;
+  user-select: none;
+}
+.hero__word.is-on { opacity: 1; }
+.hero__word .ch { visibility: hidden; }
+.hero__word .ch.is-on { visibility: visible; }
+/* 滑鼠移上去冒出來的「not」和「?」用紅色（跟 logo 的「.」同一個紅） */
+.hero__word .aside { color: var(--red); }
+.hero__word .aside .ch { display: none; }
+.hero__word .aside .ch.is-on { display: inline; }
+
+.hero__blurb {
+  margin: 1.7rem auto 0; max-width: 26rem; font-size: 1.008rem; line-height: 1.6; color: var(--ink-2);
+}
+.hero__blurb .phrase { display: inline-block; }   /* 一段一個區塊：放不下時整段換到下一行 */
+.hero__blurb .ch { visibility: hidden; }
+.hero__blurb .ch.is-on { visibility: visible; }
+.hero__go { margin-top: 2.1rem; font-size: .875rem; }
+/* 矮螢幕（手機橫放）：間距收緊、介紹文字放寬成一行，按鈕才不會被草地蓋住 */
+@media (max-height: 34rem) and (orientation: landscape) {
+  .hero__blurb { margin-top: .8rem; max-width: 38rem; font-size: .875rem; line-height: 1.45; }
+  .hero__go { margin-top: 1rem; font-size: .8125rem; }
+}
+
+.stage { position: fixed; inset: 0; z-index: 2; pointer-events: none;
+  transition: opacity .48s var(--ease-decel), translate .72s var(--ease-settle), visibility 0s; }
+/* 單篇：草地往下沉、淡出 */
+body.at-post .stage { opacity: 0; visibility: hidden; translate: 0 14vh;
+  transition: opacity .32s var(--ease-accel), translate .48s var(--ease-accel), visibility 0s .48s; }
+.stage canvas { width: 100%; height: 100%; display: block; }
+
+.track { position: fixed; left: 0; right: 0; bottom: max(.4rem, env(safe-area-inset-bottom)); z-index: 3; display: flex; justify-content: center; }
+.track__inner { width: min(32rem, 100vw - 48px); }
+.track__bar { position: relative; height: 1.2rem; cursor: pointer; touch-action: none; }
+.track__seg { position: absolute; top: 50%; height: 2px; margin-top: -1px; border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 30%, transparent); }
+.track__seg--l { left: 0; }
+.track__seg--r { right: 0; }
+.track__thumb { position: absolute; top: 50%; width: 4px; height: .53rem; margin: -.265rem 0 0 -2px; border-radius: 999px; background: var(--red); }
+.track__meta { display: flex; justify-content: space-between; align-items: center; height: 1.6rem; }
+.track__meta p { font-size: .75rem; color: var(--ink-2); }
+.track__keys { display: flex; gap: .2rem; }
+.track__keys .btn { width: 1.6rem; height: 1.6rem; font-size: .75rem; border-radius: 999px; }
+.track__keys .btn svg { width: .8rem; height: .8rem; }
