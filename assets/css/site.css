@@ -1,0 +1,162 @@
+/* ---------- 顏色 ---------- */
+:root {
+  --paper: #faf8f2; --ink: #22251e; --ink-2: #4c5243; --ink-3: #6a7060;
+  --line: #ddd9cb; --line-soft: #eae7dc; --red: #b8431f;
+  --primary: lab(6.16 -0.44 3.18); --primary-hover: lab(20 -0.5 3);
+  --on-primary: #f9f8f3;
+
+  /* 英文和數字用 Fraunces；中文用思源宋體（Noto Serif TC，列表和單篇頁才載入，只下載作品標題用到的字，見 reader.js） */
+  --serif: 'Fraunces', 'Noto Serif TC', Georgia, 'Times New Roman', 'Songti TC', serif;
+  --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-decel: cubic-bezier(0, 0, .2, 1);
+  --ease-accel: cubic-bezier(.4, 0, 1, 1);
+  --ease-settle: cubic-bezier(.22, 1, .36, 1);
+  --ease-swap: cubic-bezier(.65, 0, .35, 1);
+  --radius: .375rem;
+  --gutter: clamp(1.5rem, 4.5vw, 4rem);
+  --mast-pad: clamp(1.1rem, 2.4vw, 1.9rem);
+  --mast-clear: calc(var(--mast-pad) * 2 + 2.25rem);   /* 頁首佔掉的高度 */
+}
+
+/* ---------- 基本 ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }   /* iPhone 橫放時不要自動把字放大 */
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  letter-spacing: -0.015em;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+h1, h2, h3, p { margin: 0; font-weight: 400; }
+svg { display: block; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- 按鈕 ---------- */
+.btn {
+  position: relative; isolation: isolate;
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 3em; padding: 0 1.125em; border-radius: var(--radius);
+  font-size: .75rem; font-weight: 500; letter-spacing: -0.015em; white-space: nowrap;
+  color: var(--ink);
+}
+.btn::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  transition: inset .15s var(--ease-out), background-color .15s var(--ease-out);
+}
+.btn:hover::before { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.btn:active::before { inset: 1px; background: color-mix(in srgb, var(--ink) 11%, transparent); }
+.btn--icon { width: 3em; padding: 0; }
+.btn--ring::before { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 26%, transparent); }
+.btn svg { width: 1.15em; height: 1.15em; }
+.btn .in { font-weight: 700; font-size: 1.05em; letter-spacing: 0; }
+
+/* 圖示換位動畫（hover 時舊的滑出、新的滑入） */
+.swap { position: relative; display: grid; overflow: hidden; }
+.swap > i { grid-area: 1 / 1; display: flex; align-items: center; justify-content: center; font-style: normal;
+  transition: transform .3s var(--ease-swap); }
+.swap > i + i { transform: translateX(-140%); }
+.swap-host:hover .swap > i:first-child { transform: translateX(140%); }
+.swap-host:hover .swap > i + i { transform: none; }
+
+/* 兩段式按鈕：hover 時中間裂開、右半邊變圓 */
+.seam {
+  position: relative; isolation: isolate;
+  display: inline-flex; align-items: stretch; height: 3em;
+  border-radius: var(--radius); font-weight: 500; letter-spacing: -0.015em; white-space: nowrap;
+  --bg: var(--primary); --bg-hover: var(--primary-hover); color: var(--on-primary);
+  --gap: 0px;
+}
+.seam:hover { --gap: .3em; }
+.seam__bg { position: absolute; inset: 0; z-index: -1; display: flex; }
+.seam__bg > span { background: var(--bg); transition: margin .3s var(--ease-out), border-radius .3s var(--ease-out), background-color .15s; }
+.seam__l { flex: 1; border-radius: var(--radius) 0 0 var(--radius); margin-right: calc(var(--gap) / 2); }
+.seam__r { width: 3em; margin-left: calc(var(--gap) / 2 - 1px); border-radius: 0 var(--radius) var(--radius) 0; }
+.seam:hover .seam__bg > span { background: var(--bg-hover); }
+.seam:hover .seam__l { border-radius: var(--radius); }
+.seam:hover .seam__r { border-radius: 1.5em; }
+.seam__label { display: grid; place-items: center; padding: 0 1.125em; }
+.seam__icon { width: 3em; display: grid; place-items: center; }
+.seam__icon svg { width: 1.15em; height: 1.15em; }
+
+/* 外框兩段式（返回鍵） */
+.back {
+  display: inline-flex; align-items: stretch; height: 3em; font-size: .75rem; font-weight: 500;
+  border-radius: var(--radius); position: relative; isolation: isolate; color: var(--ink);
+}
+.back::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent);
+  transition: background-color .15s var(--ease-out); }
+.back:hover::before { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.back__icon { width: 3em; display: grid; place-items: center; }
+.back__icon svg { width: 1.15em; height: 1.15em; }
+.back__label { display: grid; place-items: center; padding: 0 1.125em 0 .5em; }
+.back .swap > i + i { transform: translateX(140%); }
+.back:hover .swap > i:first-child { transform: translateX(-140%); }
+.back:hover .swap > i + i { transform: none; }
+
+/* ---------- 頁首 ---------- */
+.mast {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--mast-pad) var(--gutter);
+  pointer-events: none;
+}
+.mast > * { pointer-events: auto; }
+/* 換頁時左上角換成新的按鈕，從左邊淡入 */
+.mast__corner.is-new { animation: corner-in .32s var(--ease-decel) backwards; }
+@keyframes corner-in { from { opacity: 0; translate: -.375rem 0; } }
+.mark { display: inline-flex; align-items: center; gap: .6rem; color: var(--ink); }
+/* therapist.160 文字 logo：跟首頁標題同一套字，滑鼠移上去變粗、變圓 */
+.mark__name { font-family: var(--serif); font-size: 1.375rem; line-height: 1; letter-spacing: -0.02em; white-space: nowrap;
+  font-variation-settings: 'wght' 420, 'opsz' 36, 'SOFT' 0, 'WONK' 1; transition: font-variation-settings .35s var(--ease-out); }
+.mark:hover .mark__name { font-variation-settings: 'wght' 620, 'opsz' 36, 'SOFT' 40, 'WONK' 1; }
+.mark__name i { font-style: normal; color: var(--red); }
+.mark__say {
+  font-size: .75rem; line-height: 1; letter-spacing: .01em;
+  padding: .35rem .6rem; border-radius: 999px;
+  background: var(--ink); color: var(--paper);
+  opacity: 0; translate: -.25rem 0;
+  transition: opacity .18s var(--ease-out), translate .32s var(--ease-out);
+}
+.mark:hover .mark__say { opacity: 1; translate: 0 0; }
+.mast__end { display: flex; align-items: center; gap: .25rem; }
+.mast__works.is-here, .mast__info.is-here { text-decoration: underline; text-underline-offset: .3em; text-decoration-thickness: 1px; }
+/* 手機（480px 以下）：返回鍵只留箭頭（跟原站一樣），右邊的按鈕才放得下 */
+@media (max-width: 30rem) {
+  .back__label { display: none; }
+}
+/* 觸控螢幕沒有滑鼠移上去這回事，「You are here.」不出現 */
+@media (hover: none) { .mark__say { display: none; } }
+
+/* 頁面淡入 */
+.fade-in { opacity: 0; transition: opacity .6s var(--ease-out); }
+.fade-in.is-in { opacity: 1; }
+
+/* 系統設定「減少動態效果」時，換頁不做動畫 */
+@media (prefers-reduced-motion: reduce) {
+  .reader, .reader[data-closing], .leaf, .leaf[data-leaving], .stage, body.at-post .stage, .sky { transition: none; }
+  .reader { translate: none; }
+  .leaf[data-turned], .mast__corner.is-new { animation: none; }
+}
+
+/* 飄落的草和花瓣（drift.js）：蓋在所有東西最前面，但在全螢幕檢視器（.lb, z-index 50）下面；不擋滑鼠。
+   只在首頁和作品列表出現，進到單篇作品時淡出 */
+.drift { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 30; pointer-events: none; transition: opacity .4s var(--ease-out); }
+body.at-post .drift { opacity: 0; }
+
+/* 逆光（sunlight.js）：太陽在右上角外面，光暈＋光束＋光塵。疊在草地、標題、滑桿上面，頁首和飄落的草下面；不擋滑鼠。
+   進到單篇作品時淡出 */
+.sun { position: fixed; inset: 0; z-index: 4; pointer-events: none; transition: opacity .6s var(--ease-out); }
+.sun canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sun__rays { filter: blur(4px); }
+body.at-post .sun { opacity: 0; }

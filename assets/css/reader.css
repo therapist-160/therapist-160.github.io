@@ -1,0 +1,146 @@
+/* ---------- 作品列表、單篇 ---------- */
+/* 閱讀層：從首頁打開時從下面滑上來，回首頁時往下淡出（時間照原站） */
+.reader {
+  position: fixed; inset: 0; overflow-y: auto; overscroll-behavior: contain; z-index: 1;
+  background: linear-gradient(transparent 0, color-mix(in oklab, var(--paper) 55%, transparent) 6%, var(--paper) 16%);
+  -webkit-mask-image: linear-gradient(transparent 0, transparent 3.5rem, #000 7.5rem);
+  mask-image: linear-gradient(transparent 0, transparent 3.5rem, #000 7.5rem);
+  opacity: 0; translate: 0 22%;
+  transition: translate .76s var(--ease-out), opacity .42s linear;
+}
+.reader[hidden] { display: none; }
+.reader[data-shown] { opacity: 1; translate: 0 0; }
+.reader[data-closing] { opacity: 0; translate: 0 6%; pointer-events: none;
+  transition: translate .48s var(--ease-accel), opacity .32s var(--ease-accel); }
+/* 列表 ↔ 單篇：舊的往上淡出，新的從下面浮上來 */
+.leaf { transition: opacity .2s var(--ease-decel), translate .2s var(--ease-decel); }
+.leaf[data-leaving] { opacity: 0; translate: 0 -.75rem; pointer-events: none;
+  transition: opacity .2s var(--ease-accel), translate .2s var(--ease-accel); }
+.leaf[data-turned] { animation: leaf-in .48s var(--ease-decel) backwards; }
+@keyframes leaf-in { from { opacity: 0; translate: 0 1.25rem; } }
+.reader__sheet { width: min(100% - var(--gutter) * 2, 34rem); margin: 0 auto; padding: max(var(--mast-clear) + 1.5rem, min(8.05rem, 18vh)) 0 18rem; }
+.reader__sheet h2 { font-family: var(--serif); font-size: clamp(1.7rem, 5vw, 2.7rem); line-height: 1.06; letter-spacing: -0.024em;
+  font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 72; }
+
+/* 年份：平板以下放在作品上方同一行；960px 以上移到左邊、捲動時黏著（跟原站一樣） */
+.reader__index { display: grid; gap: .5rem; margin-top: 2.75rem; }
+.reader__year { display: flex; align-items: baseline; gap: .5rem; }
+.reader__year b { font-family: var(--serif); font-weight: 400; font-size: 1.375rem; line-height: 1; letter-spacing: -0.01em; color: var(--ink-2);
+  font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 72; }
+.reader__year span { font-size: .75rem; color: var(--ink-3); }
+@media (min-width: 60rem) {
+  .reader__index { grid-template-columns: 7rem 34rem; gap: 0 2.5rem; margin-left: -9.5rem; }
+  .reader__year { position: sticky; top: 8rem; align-self: start; flex-direction: column; gap: .25rem; }
+  .reader__year b { font-size: 2.25rem; }
+}
+.reader__row { display: flex; flex-direction: column; padding: 1.05rem 0; border-bottom: 1px solid var(--line-soft); }
+.reader__title { font-family: var(--serif); font-size: 1.0625rem; line-height: 1.3; letter-spacing: -0.012em;
+  font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 24; transition: color .2s var(--ease-out); }
+.reader__blurb { margin-top: .2rem; font-size: .9375rem; line-height: 1.5; color: var(--ink-3); }
+.reader__when { margin-top: .35rem; font-size: .75rem; letter-spacing: .02em; color: var(--ink-3); }
+.reader__row:hover .reader__title { color: var(--red); }
+
+/* ---------- 單篇：標題，接著圖片和影片一路往下 ---------- */
+.story__head, .story__body { width: min(100% - var(--gutter) * 2, 52rem); margin: 0 auto; }
+.story__body { padding-bottom: 8rem; }
+.story__head { padding: clamp(6.5rem, 18vh, 10rem) 0 clamp(2rem, 5vh, 3.5rem); }
+.story__kicker { font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.story__title { margin: 1rem 0 0; font-family: var(--serif); font-weight: 400; font-size: clamp(2rem, 6vw, 3.25rem); line-height: 1.12; letter-spacing: -0.03em;
+  font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 144; }
+.story__meta { margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: .25rem 1.75rem; font-size: .875rem; line-height: 1.5; color: var(--ink-3); }
+
+.story__media { margin: 0 0 2rem; }
+.story__media img, .story__media video { width: 100%; display: block; border-radius: .4rem; }
+/* 圖片：最高一個螢幕（扣掉上方按鈕列），直式和方形的圖會變窄置中，捲動時每張都看得完整；點了放大 */
+.story__zoom { display: block; margin: 0 auto; padding: 0; border: 0; background: none; cursor: zoom-in; width: fit-content; max-width: 100%; }
+.story__zoom img { width: auto; max-width: 100%; max-height: calc(100dvh - var(--mast-clear) - 6rem); margin: 0 auto; transition: opacity .3s var(--ease-out); }
+.story__zoom:hover img { opacity: .92; }
+/* 影片：16:9 的框；直式（Shorts）在框裡置中一個 9:16 */
+.story__video { position: relative; aspect-ratio: 16 / 9; width: min(100%, (100dvh - var(--mast-clear) - 6rem) * 16 / 9); margin-inline: auto; }
+.story__yt { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; border-radius: .4rem; overflow: hidden; background: var(--ink); }
+.story__video.is-tall .story__yt { left: 50%; right: auto; width: auto; aspect-ratio: 9 / 16; translate: -50% 0; }
+/* 手機、直式平板：16:9 的框太矮，直式影片改成整個 9:16（最高一個螢幕） */
+@media (max-width: 48rem) and (orientation: portrait) {
+  .story__video.is-tall { aspect-ratio: 9 / 16; width: min(100%, (100dvh - var(--mast-clear) - 6rem) * 9 / 16); margin-inline: auto; }
+  .story__video.is-tall .story__yt { left: 0; width: 100%; translate: none; }
+}
+.story__clip { width: 100%; }
+.story__yt { cursor: pointer; }
+.story__yt img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; opacity: .88; transition: opacity .3s var(--ease-out); }
+.story__yt:hover img { opacity: 1; }
+.story__play { position: absolute; left: 50%; top: 50%; width: 4.5rem; height: 4.5rem; translate: -50% -50%; border-radius: 50%;
+  display: grid; place-items: center; background: var(--red); color: #f9f8f3; transition: scale .3s var(--ease-out); }
+.story__play svg { width: 1.6rem; height: 1.6rem; margin-left: .2rem; }
+.story__yt:hover .story__play { scale: 1.08; }
+@media (max-width: 30rem) { .story__play { width: 3.5rem; height: 3.5rem; } .story__play svg { width: 1.25rem; height: 1.25rem; } }
+
+/* 全螢幕檢視 */
+.lb { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: rgb(34 37 30 / .94); opacity: 0; transition: opacity .25s var(--ease-out); cursor: zoom-out; }
+.lb[hidden] { display: none; }   /* 上面的 display: grid 會蓋掉 hidden，關著時這層透明膜會擋住整頁的捲動和點擊 */
+.lb.is-open { opacity: 1; }
+.lb__stage { display: contents; }
+.lb__media { border-radius: .25rem; cursor: default; scale: .97; transition: scale .35s var(--ease-out); }
+.lb.is-open .lb__media { scale: 1; }
+.lb__img { max-width: calc(100vw - 12rem); max-height: calc(100vh - 9rem); object-fit: contain; }
+/* YouTube：橫的 16:9、直的 9:16，盡量放大但不超出畫面 */
+.lb__frame { border: 0; background: #000; aspect-ratio: 16 / 9; width: min(calc(100vw - 12rem), calc((100vh - 9rem) * 16 / 9)); }
+.lb__frame.is-tall { aspect-ratio: 9 / 16; width: auto; height: calc(100vh - 9rem); }
+.lb__btn { position: absolute; width: 3rem; height: 3rem; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%;
+  background: rgb(250 248 242 / .12); color: #faf8f2; cursor: pointer; transition: background-color .2s; }
+.lb__btn:hover { background: rgb(250 248 242 / .24); }
+.lb__btn svg { width: 1.25rem; height: 1.25rem; }
+.lb__close { top: 1.5rem; right: 1.5rem; }
+.lb__prev { left: 1.5rem; top: 50%; translate: 0 -50%; }
+.lb__next { right: 1.5rem; top: 50%; translate: 0 -50%; }
+.lb__count { position: absolute; left: 0; right: 0; bottom: 1.5rem; margin: 0; text-align: center;
+  font-size: .75rem; letter-spacing: .1em; color: rgb(250 248 242 / .7); }
+.lb.is-single .lb__prev, .lb.is-single .lb__next, .lb.is-single .lb__count { display: none; }
+/* 手機、平板直放：圖片幾乎滿版，左右鍵移到下方（也可以左右滑） */
+@media (max-width: 48rem) {
+  .lb__img { max-width: calc(100vw - 1.5rem); max-height: calc(100dvh - 10rem); }
+  .lb__frame { width: min(calc(100vw - 1.5rem), calc((100dvh - 10rem) * 16 / 9)); }
+  .lb__frame.is-tall { width: auto; height: min(calc(100dvh - 10rem), calc((100vw - 1.5rem) * 16 / 9)); }
+  .lb__close { top: 1rem; right: 1rem; }
+  .lb__prev, .lb__next { top: auto; bottom: 1.25rem; translate: none; }
+  .lb__prev { left: 1rem; }
+  .lb__next { right: 1rem; }
+  .lb__count { bottom: 2.25rem; }
+}
+/* 手機橫放：上下很矮，左右鍵維持在兩側 */
+@media (max-height: 34rem) and (orientation: landscape) {
+  .lb__img { max-width: calc(100vw - 9rem); max-height: calc(100dvh - 2rem); }
+  .lb__frame { width: min(calc(100vw - 9rem), calc((100dvh - 2rem) * 16 / 9)); }
+  .lb__frame.is-tall { width: auto; height: calc(100dvh - 2rem); }
+  .lb__close { top: .75rem; right: 1rem; }
+  .lb__prev, .lb__next { top: 50%; bottom: auto; translate: 0 -50%; }
+  .lb__count { display: none; }
+}
+
+.reveal { opacity: 0; translate: 0 1.2rem; transition: opacity .8s var(--ease-out), translate .8s var(--ease-out); }
+.reveal.is-in { opacity: 1; translate: 0 0; }
+
+/* ---------- Info：文字在上面置中一欄，下面是草丘和人物（草地蓋在文字上面，文字長了會捲到草後面，跟列表一樣） ---------- */
+.reader__sheet.info { padding-bottom: 40vh; }   /* 捲到底時最後一段停在人物頭上 */
+.info p { margin-top: 1.1rem; font-size: 1rem; line-height: 1.65; color: var(--ink-2); }
+.info .info__lead { margin-top: 1.75rem; font-family: var(--serif); font-size: clamp(1.15rem, 2.4vw, 1.375rem); line-height: 1.45;
+  letter-spacing: -0.012em; color: var(--ink); font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 36; }
+/* IG、GitHub 圓框圖示（從右上角移過來，2026-11-03）：最後一段下面，靠左對齊內文 */
+.info .nobr { white-space: nowrap; }   /* 段落結尾一起換行 */
+.info .social { display: flex; gap: .5rem; margin-top: 1.75rem; }
+/* 中等高度的橫向螢幕（筆電、平板橫放）：上方留白收緊一點，人物才不用縮太小 */
+@media (max-height: 56rem) and (orientation: landscape) {
+  .reader__sheet.info { padding-top: calc(var(--mast-clear) + 1.25rem); }
+  .info h2 { font-size: 2.3rem; }
+  .info .info__lead { margin-top: 1.25rem; }
+  .info p { margin-top: .85rem; }
+  .info .social { margin-top: 1.25rem; }
+}
+/* 矮螢幕（手機橫放）：上方留白收緊、標題和第一段縮小，人物才不會一開始就蓋住文字 */
+@media (max-height: 34rem) and (orientation: landscape) {
+  .reader__sheet.info { padding-top: calc(var(--mast-clear) + .25rem); }
+  .info h2 { font-size: 1.6rem; }
+  .info .info__lead { margin-top: .9rem; font-size: 1.05rem; line-height: 1.5; }
+  .info p { margin-top: .7rem; font-size: .9375rem; line-height: 1.6; }
+  .info .social { margin-top: .9rem; }
+}
